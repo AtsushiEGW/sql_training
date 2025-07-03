@@ -1,2 +1,2 @@
-.duckdb
+*.duckdb
 .venv
