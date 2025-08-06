@@ -1,3 +1,5 @@
-duckdb
 jupyter
 pandas
+psycopg2-binary
+sqlalchemy
+ruff
