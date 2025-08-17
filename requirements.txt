@@ -1,5 +1,12 @@
 jupyter
+ipykernel
 pandas
 psycopg2-binary
 sqlalchemy
 ruff
+sqlfluff
+# sqlfluff-templater-dbt
+black
+# yamllint
+# dbt-checkpoint
+# pre-commit
