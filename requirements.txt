@@ -1,12 +1,14 @@
 jupyter
 ipykernel
 pandas
+ipython-sql
 psycopg2-binary
 sqlalchemy
 ruff
 sqlfluff
 # sqlfluff-templater-dbt
 black
+python-dotenv
 # yamllint
 # dbt-checkpoint
 # pre-commit

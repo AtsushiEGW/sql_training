@@ -43,7 +43,9 @@
 				"redhat.vscode-yaml",
 				"esbenp.prettier-vscode",
 				"cweijan.vscode-postgresql-client2",
-				"charliermarsh.ruff"
+				"charliermarsh.ruff",
+				"qufiwefefwoyn.inline-sql-syntax"
+
 
 			],
 			"settings": {
