@@ -1,0 +1,18 @@
+[project]
+name = "sql-training"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "black>=25.12.0",
+    "duckdb>=1.4.3",
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
+    "pandas>=2.3.3",
+    "psycopg[binary]>=3.3.2",
+    "python-dotenv>=1.2.1",
+    "ruff>=0.14.10",
+    "sqlalchemy>=2.0.45",
+    "sqlfluff>=3.5.0",
+]

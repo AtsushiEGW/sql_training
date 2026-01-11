@@ -1,33 +1,18 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: docker/python/Dockerfile
-      args:
-        USER_NAME: ${USER_NAME}
-        USER_UID: ${USER_UID}
-        USER_GID: ${USER_GID}
-    user: "${USER_UID}:${USER_GID}"
-    container_name: sql_training_app
-    env_file: .env
-    working_dir: /workspace
-    volumes:
-      - .:/workspace
-    depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: postgres:17-alpine
-    container_name: sql_training_db
+  postgres:
+    image: postgres:17
+    container_name: sql_training
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
     env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Tokyo
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -35,4 +20,4 @@ services:
       retries: 10
 
 volumes:
-  pgdata:
+  postgres_data:
