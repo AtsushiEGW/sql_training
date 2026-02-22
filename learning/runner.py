@@ -8,10 +8,10 @@ import datetime
 
 import pandas as pd
 import numpy as np
+import marimo as mo  # marimo をインポート
 
 import psycopg
 import duckdb
-from IPython.display import display, Markdown
 
 # =============================================================================
 # SQL preprocessing / splitting (変更なし)
@@ -121,23 +121,25 @@ class DualRunner:
             self._dd = duckdb.connect(self.duckdb_path)
         return self._dd
 
-    # --- Jupyter Display Helpers ---
+    # --- Jupyter/Marimo Display Helpers ---
 
-    def pg(self, sql: str, params: Optional[Dict[str, Any]] = None) -> Result:
-        """Postgresのみ実行して結果を表示"""
-        display(Markdown("### 🐘 PostgreSQL Result"))
+    def pg(self, sql: str, params: Optional[Dict[str, Any]] = None) -> mo.Html:
+        """Postgresのみ実行して結果を表示するコンポーネントを返す"""
         res = self.run_pg(sql, params)
-        display(res)
-        return None
+        return mo.vstack([
+            mo.md("### 🐘 PostgreSQL Result"),
+            res
+        ])
 
-    def dd(self, sql: str, params: Optional[Dict[str, Any]] = None) -> Result:
-        """DuckDBのみ実行して結果を表示"""
-        display(Markdown("### 🦆 DuckDB Result"))
+    def dd(self, sql: str, params: Optional[Dict[str, Any]] = None) -> mo.Html:
+        """DuckDBのみ実行して結果を表示するコンポーネントを返す"""
         res = self.run_dd(sql, params)
-        display(res)
-        return None
+        return mo.vstack([
+            mo.md("### 🦆 DuckDB Result"),
+            res
+        ])
 
-    # --- Execution Core ---
+    # --- Execution Core (変更なし) ---
 
     def run_pg(self, sql: str, params: Optional[Dict[str, Any]] = None) -> Result:
         params = params or {}
@@ -154,8 +156,8 @@ class DualRunner:
                         last_df = pd.DataFrame(cur.fetchall(), columns=[d.name for d in cur.description])
             conn.commit()  # すべて成功したらコミット
         except Exception as e:
-            conn.rollback()  # エラーが起きたらロールバックして状態を正常に戻す
-            raise e  # エラーは外側に投げて check() などで表示させる
+            conn.rollback()  # エラーが起きたらロールバック
+            raise e 
 
         return last_df if last_df is not None else {"ok": True, "executed": executed}
 
@@ -185,7 +187,12 @@ class DualRunner:
             ignore_col_order: bool = True,
             float_sig: int = 10,
             show_head: int = 10,
-        ) -> Result:
+        ) -> mo.Html:
+            """
+            Marimo用に修正:
+            結果を逐次 display() するのではなく、
+            表示したい要素のリスト(mo.vstack)を返り値として戻す。
+            """
             params = params or {}
             pg_out, dd_out = None, None
             pg_err, dd_err = None, None
@@ -201,26 +208,29 @@ class DualRunner:
             except Exception as e:
                 dd_err = e
 
+            # 表示要素を格納するリスト
+            elements = []
+
             # 2. エラー発生時の処理
             if pg_err or dd_err:
-                display(Markdown("## ❌ Execution Error"))
+                elements.append(mo.md("## ❌ Execution Error"))
                 if pg_err:
-                    display(Markdown("#### 🐘 PostgreSQL Error"))
-                    print(pg_err)
+                    elements.append(mo.callout(str(pg_err), kind="danger", title="🐘 PostgreSQL Error"))
                 if dd_err:
-                    display(Markdown("#### 🦆 DuckDB Error"))
-                    print(dd_err)
-                return None
+                    elements.append(mo.callout(str(dd_err), kind="danger", title="🦆 DuckDB Error"))
+                return mo.vstack(elements)
 
             # 3. SELECT/RETURNING がない場合の処理
             if not isinstance(pg_out, pd.DataFrame) or not isinstance(dd_out, pd.DataFrame):
-                display(Markdown("### ✅ No comparable result set (DDL/DML executed)"))
-                return pg_out
+                elements.append(mo.md("### ✅ No comparable result set (DDL/DML executed)"))
+                elements.append(mo.ui.json(pg_out)) # 辞書などをきれいに表示
+                return mo.vstack(elements)
 
             # 4. 比較ロジック
             pg_df = normalize_df_shape(pg_out, ignore_col_order=ignore_col_order)
             dd_df = normalize_df_shape(dd_out, ignore_col_order=ignore_col_order)
 
+            same = False
             if mode == "hash":
                 pg_fp = fingerprint_df(pg_df, ignore_row_order=ignore_row_order, float_sig=float_sig)
                 dd_fp = fingerprint_df(dd_df, ignore_row_order=ignore_row_order, float_sig=float_sig)
@@ -234,24 +244,27 @@ class DualRunner:
                 except AssertionError:
                     same = False
 
-            # 5. 結果の表示
+            # 5. 結果の表示構築
             if same:
-                display(Markdown("### ✅ SAME"))
+                elements.append(mo.md("### ✅ SAME"))
                 # 一致していればPostgresの結果のみ表示
-                display(pg_out)
+                elements.append(pg_out)
             else:
-                display(Markdown("## ❌ DIFF Detected"))
-                # 不一致なら両方表示
-                display(Markdown("#### 🐘 PostgreSQL Result"))
-                display(pg_out)
-                display(Markdown("#### 🦆 DuckDB Result"))
-                display(dd_out)
+                elements.append(mo.md("## ❌ DIFF Detected"))
                 
-                # 型や指紋の情報もデバッグ用に表示
-                print(f"PG dtypes:\n{pg_out.dtypes}\n")
-                print(f"DuckDB dtypes:\n{dd_out.dtypes}")
+                # 型情報をデバッグ用に文字列化
+                debug_info = f"**PG dtypes:**\n{pg_out.dtypes}\n\n**DuckDB dtypes:**\n{dd_out.dtypes}"
+                
+                # タブまたは並列表示で比較しやすくする
+                elements.append(
+                    mo.ui.tabs({
+                        "🐘 PostgreSQL": pg_out,
+                        "🦆 DuckDB": dd_out,
+                        "🔍 Debug Info": mo.md(debug_info)
+                    })
+                )
 
-            return None
+            return mo.vstack(elements)
 
     def close(self) -> None:
         if self._pg: self._pg.close(); self._pg = None
