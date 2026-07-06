@@ -1,0 +1,24 @@
+-- init.sql
+-- CSV の取り込み後に実行される、SQL レベルの追加セットアップ。
+-- （CSV -> テーブルの取り込み自体は init.py が担当します）
+--
+-- テーブルは "スキーマ名"."テーブル名" で参照します（例: ecommerce.orders）。
+-- 下は ecommerce スキーマ内に、注文明細へ顧客・商品・金額を結合した
+-- ビューを作る例です。ビューも同じスキーマに属させています。
+
+-- CREATE OR REPLACE VIEW ecommerce.order_details AS
+-- SELECT
+--     o.order_id,
+--     o.order_date,
+--     o.status,
+--     c.name              AS customer_name,
+--     c.city              AS customer_city,
+--     p.product_name,
+--     p.category,
+--     oi.quantity,
+--     p.price,
+--     oi.quantity * p.price AS line_total
+-- FROM ecommerce.orders      AS o
+-- JOIN ecommerce.customers   AS c  ON c.customer_id = o.customer_id
+-- JOIN ecommerce.order_items AS oi ON oi.order_id   = o.order_id
+-- JOIN ecommerce.products    AS p  ON p.product_id  = oi.product_id;
