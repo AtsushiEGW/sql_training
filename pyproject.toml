@@ -8,6 +8,7 @@ dependencies = [
     "duckdb>=1.0",
     "marimo>=0.9",
     "polars>=1.0",
+    "sqlglot>=30.13.0",
 ]
 
 # [build-system] を書かないことで、uv はこのプロジェクトを
